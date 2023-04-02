@@ -1,22 +1,18 @@
-import 'dart:ffi';
-
 import 'package:fastfoodapp/services/httpStatusService.dart';
 import 'package:fastfoodapp/utils/httpUtil.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
-class RegisterController {
+class LoginController {
   final httpStatus = HttpStatusService();
   final httpUtil = HttpUtil();
 
-  List validateRegisterForm(
-      String name, String email, String password, String passwordRepeat) {
+  List validateLoginForm(
+    String email,
+    String password,
+  ) {
     RegExp regex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     List errors = [];
-
-    if (name.isEmpty) {
-      errors.add({"field": "name", "description": "fieldRequired"});
-    }
 
     if (email.isEmpty) {
       errors.add({"field": "email", "description": "fieldRequired"});
@@ -30,24 +26,13 @@ class RegisterController {
       errors.add({"field": "password", "description": "fieldRequired"});
     }
 
-    if (passwordRepeat.isEmpty) {
-      errors.add({"field": "passwordRepeat", "description": "fieldRequired"});
-    }
-
-    if (!password.isEmpty &&
-        !passwordRepeat.isEmpty &&
-        password != passwordRepeat) {
-      errors
-          .add({"field": "passwordRepeat", "description": "passwordNotMatch"});
-    }
-
     return errors;
   }
 
-  register(name, email, password) async {
-    Object data = {"name": name, "email": email, "password": password};
+  login(email, password) async {
+    Object data = {"email": email, "password": password};
 
-    final response = await httpUtil.httpPost("/register", data);
+    final response = await httpUtil.httpPost("/login", data);
 
     if (response["status"] == httpStatus.SUCCESS) {
       return response;

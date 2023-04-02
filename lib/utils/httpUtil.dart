@@ -6,85 +6,69 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:http/http.dart' as http;
 
-
 class HttpUtil {
   final client = http.Client();
   final httpStatusService = HttpStatusService();
 
   httpPost(String url, data, {bool isClientAuth = false}) async {
-
     final headers = await setHeaderRequest(isClientAuth);
-   
+
     await dotenv.load(
       fileName: ".env",
     );
-    
-    final response = await client.post(
-      Uri.parse("${dotenv.env['SERVER_URL']}$url"),
-      headers: headers,
-      body: json.encode(data)
-    );
 
-    
+    final response = await client.post(
+        Uri.parse("${dotenv.env['SERVER_URL']}$url"),
+        headers: headers,
+        body: json.encode(data));
 
     var hasError = responseHasError(response);
-    if(hasError != false){
+    if (hasError != false) {
       return hasError;
     }
     return {
       "status": httpStatusService.SUCCESS,
-      "message": "success",
+      "success": true,
       "data": json.decode(response.body)
     };
   }
 
   httpGet(String url, {bool isClientAuth = false}) async {
-    
-    try{
-
+    try {
       final headers = await setHeaderRequest(isClientAuth);
       await dotenv.load(
         fileName: ".env",
       );
-      final response = await client.get(
-        Uri.parse("${dotenv.env['SERVER_URL']}$url"),
-        headers: headers
-      );
+      final response = await client
+          .get(Uri.parse("${dotenv.env['SERVER_URL']}$url"), headers: headers);
       var hasError = responseHasError(response);
-      if(hasError != false){
+      if (hasError != false) {
         return hasError;
       }
-      
+
       return {
         "status": httpStatusService.SUCCESS,
         "message": "success",
         "data": json.decode(response.body)
       };
-
-    }catch(e){
-
-      if(e == "Connection closed before full header was received"){
+    } catch (e) {
+      if (e == "Connection closed before full header was received") {
         httpGet(url, isClientAuth: isClientAuth);
       }
-
     }
-
   }
 
   httpDelete(String url, {bool isClientAuth = false}) async {
-    
-    try{
-
+    try {
       final headers = await setHeaderRequest(isClientAuth);
       await dotenv.load(
         fileName: ".env",
       );
       final response = await client.delete(
           Uri.parse("${dotenv.env['SERVER_URL']}$url"),
-          headers: headers
-      );
+          headers: headers);
       var hasError = responseHasError(response);
-      if(hasError != false){
+      if (hasError != false) {
         return hasError;
       }
 
@@ -93,79 +77,71 @@ class HttpUtil {
         "message": "success",
         "data": json.decode(response.body)
       };
-
-    }catch(e){
-
-      if(e == "Connection closed before full header was received"){
+    } catch (e) {
+      if (e == "Connection closed before full header was received") {
         httpDelete(url, isClientAuth: isClientAuth);
       }
-
     }
-
   }
 
   httpPut(String url, data, {bool isClientAuth = false}) async {
-    
-    try{
-
+    try {
       final headers = await setHeaderRequest(isClientAuth);
       await dotenv.load(
         fileName: ".env",
       );
       final response = await client.put(
-        Uri.parse("${dotenv.env['SERVER_URL']}$url"),
-        headers: headers,
-        body: json.encode(data)
-      );
+          Uri.parse("${dotenv.env['SERVER_URL']}$url"),
+          headers: headers,
+          body: json.encode(data));
       var hasError = responseHasError(response);
-      if(hasError != false){
+      if (hasError != false) {
         return hasError;
       }
-      
+
       return {
         "status": httpStatusService.SUCCESS,
         "message": "success",
         "data": json.decode(response.body)
       };
-
-    }catch(e){
-
-      if(e == "Connection closed before full header was received"){
+    } catch (e) {
+      if (e == "Connection closed before full header was received") {
         httpPut(url, data, isClientAuth: isClientAuth);
       }
-
     }
-
   }
 
-  responseHasError(response){
-    if(response.statusCode == httpStatusService.UNAUTHORIZED){
-      return {
-        "status": httpStatusService.UNAUTHORIZED,
-        "message": "NO_AUTH"
-      };
-    }
-
-    else if(response.statusCode == httpStatusService.NOT_FOUND){
+  responseHasError(response) {
+    if (response.statusCode == httpStatusService.UNAUTHORIZED) {
+      return {"status": httpStatusService.UNAUTHORIZED, "message": "NO_AUTH"};
+    } else if (response.statusCode == httpStatusService.NOT_FOUND) {
+      if (json.decode(response.body).toString().isNotEmpty) {
+        return {
+          "status": httpStatusService.NOT_FOUND,
+          "message": "NOT_FOUND",
+          "data": json.decode(response.body)
+        };
+      }
       return {
         "status": httpStatusService.NOT_FOUND,
-        "message": "NOT_FOUND"
+        "message": "NOT_FOUND",
       };
-    }
+    } else if (response.statusCode == httpStatusService.ERROR) {
+      if (json.decode(response.body).toString().isNotEmpty) {
+        return {
+          "status": httpStatusService.ERROR,
+          "message": "SOMETHING_WENT_WRONG",
+          "data": json.decode(response.body)
+        };
+      }
 
-    else if(response.statusCode == httpStatusService.ERROR){
       return {
         "status": httpStatusService.ERROR,
         "message": "SOMETHING_WENT_WRONG"
       };
-    }
-    else if(response.statusCode == httpStatusService.FORBIDDEN){
-      return {
-        "status": httpStatusService.FORBIDDEN,
-        "message": "FORBIDDEN"
-      };
-    }
-    else if(response.statusCode == httpStatusService.VALIDATION_FAIL){
+    } else if (response.statusCode == httpStatusService.FORBIDDEN) {
+      return {"status": httpStatusService.FORBIDDEN, "message": "FORBIDDEN"};
+    } else if (response.statusCode == httpStatusService.VALIDATION_FAIL) {
       return {
         "status": httpStatusService.VALIDATION_FAIL,
         "message": "WRONG_DATA",
@@ -175,7 +151,7 @@ class HttpUtil {
     return false;
   }
 
-  setHeaderRequest(bool isClientAuth)async{
+  setHeaderRequest(bool isClientAuth) async {
     var oauthToken = "";
     /*if(!isClientAuth){
       
@@ -187,10 +163,6 @@ class HttpUtil {
       };
     }*/
 
-    return {
-        "Accept":"application/json",
-        "Content-type":"application/json"
-      };
+    return {"Accept": "application/json", "Content-type": "application/json"};
   }
-
 }
