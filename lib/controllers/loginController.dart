@@ -33,7 +33,6 @@ class LoginController {
     Object data = {"email": email, "password": password};
 
     final response = await httpUtil.httpPost("/login", data);
-
     if (response["status"] == httpStatus.SUCCESS) {
       return response;
     }

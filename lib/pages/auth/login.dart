@@ -62,7 +62,7 @@ class _LoginState extends State<Login> {
     setState(() {
       isLoading = false;
     });
-    print(loginResponse);
+
     if (loginResponse["success"] == true) {
       if (loginResponse["data"]["success"] == true) {
         authService.setOauthToken(loginResponse["data"]["accessToken"]);

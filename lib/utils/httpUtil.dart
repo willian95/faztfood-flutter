@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:fastfoodapp/services/authService.dart';
 import 'package:fastfoodapp/services/httpStatusService.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -8,6 +9,7 @@ import 'package:http/http.dart' as http;
 
 class HttpUtil {
   final client = http.Client();
+  final authService = AuthService();
   final httpStatusService = HttpStatusService();
 
   httpPost(String url, data, {bool isClientAuth = false}) async {
@@ -39,6 +41,7 @@ class HttpUtil {
       await dotenv.load(
         fileName: ".env",
       );
+
       final response = await client
           .get(Uri.parse("${dotenv.env['SERVER_URL']}$url"), headers: headers);
       var hasError = responseHasError(response);
@@ -153,15 +156,14 @@ class HttpUtil {
 
   setHeaderRequest(bool isClientAuth) async {
     var oauthToken = "";
-    /*if(!isClientAuth){
-      
-      final accessToken = await userService.getUserAccessToken();
+    if (!isClientAuth) {
+      final accessToken = await authService.getOauthToken();
       return {
-        "Accept":"application/json",
-        "Content-type":"application/json",
+        "Accept": "application/json",
+        "Content-type": "application/json",
         "Authorization": "Bearer ${accessToken}"
       };
-    }*/
+    }
 
     return {"Accept": "application/json", "Content-type": "application/json"};
   }

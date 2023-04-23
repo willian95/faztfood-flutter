@@ -1,5 +1,19 @@
+import 'dart:convert';
+
 import 'package:fastfoodapp/controllers/homeController.dart';
+import 'package:fastfoodapp/models/productModel.dart';
+import 'package:fastfoodapp/models/categoryModel.dart' as CategoryModel;
 import 'package:fastfoodapp/providers/homeProvider.dart';
+import 'package:fastfoodapp/utils/httpUtil.dart';
+import 'package:fastfoodapp/widgets/categoryCard.dart';
+import 'package:fastfoodapp/widgets/homeProductCard.dart';
+import 'package:fastfoodapp/widgets/searchBoxWidget.dart';
+import 'package:fastfoodapp/widgets/skeletons/categorySkeleton.dart';
+import 'package:fastfoodapp/widgets/skeletons/productGridSkeleton.dart';
+import 'package:fastfoodapp/widgets/skeletons/productSkeleton.dart';
+import 'package:fastfoodapp/widgets/subtitlesWidget.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -9,18 +23,81 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
+  ScrollController _scrollController = ScrollController();
   TextEditingController passwordController = TextEditingController();
   HomeController homeController = HomeController();
+  final httpUtil = HttpUtil();
+  List<Product> products = [];
+  List<CategoryModel.Category> categories = [];
+  late var productFuture;
+  var categoriesFuture;
+  bool isLoading = false;
+  double _scrollPosition = 0.0;
+  double _scrollTop = 0.0;
+  bool hasPagination = true;
+  int page = 1;
+  int lastPage = 1;
 
   @override
   void initState() {
     // TODO: implement initState
-    final provider = Provider.of<HomeProvider>(context, listen: false);
-    final response = homeController.getDishes(1);
-
-    provider.setProducts(response["products"], response["lastPage"]);
 
     super.initState();
+    _scrollController.addListener(_scrollListener);
+    setState(() {
+      productFuture =
+          Provider.of<HomeProvider>(context, listen: false).getProducts();
+      categoriesFuture = getCategories();
+    });
+  }
+
+  _scrollListener() async {
+    _scrollPosition = _scrollController.position.pixels;
+    _scrollTop = _scrollController.position.maxScrollExtent;
+
+    if (_scrollPosition >= _scrollTop - 600 &&
+        isLoading == false &&
+        hasPagination == true) {
+      if (page + 1 <=
+          Provider.of<HomeProvider>(context, listen: false).lastPage) {
+        page = page + 1;
+        setState(() {
+          productFuture =
+              Provider.of<HomeProvider>(context, listen: false).getProducts();
+        });
+      }
+    }
+  }
+
+  Future<List> getCategories() async {
+    isLoading = true;
+    final response = await httpUtil.httpGet("/categories");
+
+    //ALL products
+    categories.add(CategoryModel.Category(
+        id: 0,
+        createdAt: DateTime.now().toString(),
+        updatedAt: DateTime.now().toString(),
+        deletedAt: null,
+        name: "All products",
+        picture:
+            "https://cdn-icons-png.flaticon.com/512/762/762159.png?w=826&t=st=1681988717~exp=1681989317~hmac=0b146f53b3022e85fcb630f38d6524f0e96a5146f8aeac4ed8ba382fb3c5b873",
+        slug: "all"));
+
+    for (Map<String, dynamic> data in response["data"]["data"]) {
+      categories.add(CategoryModel.Category(
+          id: data["ID"],
+          createdAt: data["CreatedAt"],
+          updatedAt: data["UpdatedAt"],
+          deletedAt: data["DeletedAt"],
+          name: data["name"],
+          picture: data["picture"],
+          slug: data["slug"]));
+    }
+
+    isLoading = false;
+
+    return categories;
   }
 
   @override
@@ -82,6 +159,7 @@ class _HomeState extends State<Home> {
             ],
           ),
           body: SingleChildScrollView(
+            controller: _scrollController,
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 10),
               child: Column(
@@ -91,204 +169,79 @@ class _HomeState extends State<Home> {
                     Text("Welcome Back!",
                         style: TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 25)),
-                    Container(
-                      margin: EdgeInsets.only(top: 25, bottom: 25),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Flexible(
-                            child: Container(
-                              height: 60,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.only(
-                                    topRight: Radius.circular(15.0),
-                                    bottomRight: Radius.circular(15.0),
-                                    topLeft: Radius.circular(15.0),
-                                    bottomLeft: Radius.circular(15.0)),
-                              ),
-                              child: Center(
-                                child: TextFormField(
-                                  decoration: InputDecoration(
-                                    prefixIcon: Icon(Icons.search),
-                                    border: InputBorder.none,
-                                    hintText: 'Search Here',
-                                  ),
+                    SearchBoxWidget(),
+                    SubtitlesWidget(text: "Food categories"),
+                    FutureBuilder(
+                        future: categoriesFuture,
+                        builder: (context, AsyncSnapshot snapshot) {
+                          if (!snapshot.hasError) {
+                            if (!snapshot.hasData) {
+                              return Container(
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceAround,
+                                  children: [
+                                    CategoryCardSkeleton(),
+                                    CategoryCardSkeleton(),
+                                  ],
                                 ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text("Food category",
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 22)),
-                        TextButton(
-                            onPressed: () {},
-                            child: Text("see all",
-                                style: TextStyle(color: Colors.green[400])))
-                      ],
-                    ),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(vertical: 10),
-                        child: Row(
-                          children: [
-                            Container(
-                              margin: EdgeInsets.symmetric(horizontal: 5),
-                              decoration: BoxDecoration(
-                                color: Colors.green.shade300,
-                                border: Border.all(
-                                  color: Colors.green.shade300,
-                                ),
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(10)),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.grey.shade200,
-                                    offset: Offset(0.0, 1.0), //(x,y)
-                                    blurRadius: 6.0,
-                                  ),
-                                ],
-                              ),
-                              padding: EdgeInsets.all(10),
-                              child: Row(
-                                children: [
-                                  Image.asset("resources/images/burger.png",
-                                      height: 25, width: 25),
-                                  SizedBox(width: 5),
-                                  Text(
-                                    "Hamburger",
-                                    style: TextStyle(
-                                        color: Colors.white, fontSize: 15),
-                                  )
-                                ],
-                              ),
-                            ),
-                            Container(
-                              margin: EdgeInsets.symmetric(horizontal: 5),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(10)),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.grey.shade200,
-                                    offset: Offset(0.0, 1.0), //(x,y)
-                                    blurRadius: 6.0,
-                                  ),
-                                ],
-                              ),
-                              padding: EdgeInsets.all(10),
-                              child: Row(
-                                children: [
-                                  Image.asset(
-                                      "resources/images/french-fries.png",
-                                      height: 25,
-                                      width: 25),
-                                  SizedBox(width: 5),
-                                  Text(
-                                    "Fries",
-                                    style: TextStyle(
-                                        color: Colors.black, fontSize: 15),
-                                  )
-                                ],
-                              ),
-                            ),
-                            Container(
-                              margin: EdgeInsets.symmetric(horizontal: 5),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(10)),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.grey.shade200,
-                                    offset: Offset(0.0, 1.0), //(x,y)
-                                    blurRadius: 6.0,
-                                  ),
-                                ],
-                              ),
-                              padding: EdgeInsets.all(10),
-                              child: Row(
-                                children: [
-                                  Image.asset("resources/images/soft-drink.png",
-                                      height: 25, width: 25),
-                                  SizedBox(width: 5),
-                                  Text(
-                                    "Drinks",
-                                    style: TextStyle(
-                                        color: Colors.black, fontSize: 15),
-                                  )
-                                ],
-                              ),
-                            ),
-                            Container(
-                              margin: EdgeInsets.symmetric(horizontal: 5),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(10)),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.grey.shade200,
-                                    offset: Offset(0.0, 1.0), //(x,y)
-                                    blurRadius: 6.0,
-                                  ),
-                                ],
-                              ),
-                              padding: EdgeInsets.all(10),
-                              child: Row(
-                                children: [
-                                  Image.asset(
-                                      "resources/images/coffee-cups.png",
-                                      height: 25,
-                                      width: 25),
-                                  SizedBox(width: 5),
-                                  Text(
-                                    "Coffee",
-                                    style: TextStyle(
-                                        color: Colors.black, fontSize: 15),
-                                  )
-                                ],
-                              ),
-                            )
-                          ],
-                        ),
-                      ),
-                    ),
-                    Container(
-                      margin: EdgeInsets.only(top: 15),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text("Popular",
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 22)),
-                          TextButton(
-                              onPressed: () {},
-                              child: Text("see all",
-                                  style: TextStyle(color: Colors.green[400])))
-                        ],
-                      ),
-                    ),
-                    GridView(
-                      shrinkWrap: true,
-                      physics: NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 10,
-                          childAspectRatio: 0.92,
-                          mainAxisSpacing: 10),
-                      children: [],
-                    ),
+                              );
+                            } else {
+                              return SizedBox(
+                                height: 60,
+                                child: ListView.builder(
+                                    scrollDirection: Axis.horizontal,
+                                    shrinkWrap: true,
+                                    itemCount: snapshot.data.length,
+                                    itemBuilder:
+                                        (BuildContext context, int index) {
+                                      return CategoryCard(
+                                          name: snapshot.data[index].name,
+                                          picture: snapshot.data[index].picture,
+                                          id: snapshot.data[index].id,
+                                          isSelected: context
+                                                  .watch<HomeProvider>()
+                                                  .selectedCategory ==
+                                              snapshot.data[index].id);
+                                    }),
+                              );
+                            }
+                          } else {
+                            return Text(snapshot.error.toString());
+                          }
+                        }),
+                    SubtitlesWidget(text: "Popular"),
+                    FutureBuilder(
+                        future: productFuture,
+                        builder: (context, AsyncSnapshot snapshot) {
+                          if (!snapshot.hasError) {
+                            if (!snapshot.hasData) {
+                              return ProductGridSkeleton();
+                            } else {
+                              return GridView.builder(
+                                  physics: NeverScrollableScrollPhysics(),
+                                  shrinkWrap: true,
+                                  gridDelegate:
+                                      const SliverGridDelegateWithFixedCrossAxisCount(
+                                          crossAxisCount: 2,
+                                          crossAxisSpacing: 10,
+                                          childAspectRatio: 0.92,
+                                          mainAxisSpacing: 10),
+                                  itemCount: snapshot.data.length,
+                                  itemBuilder:
+                                      (BuildContext context, int index) {
+                                    return HomeProductCard(
+                                      name: snapshot.data[index].name,
+                                      picture: snapshot.data[index].picture,
+                                      price: snapshot.data[index].price,
+                                    );
+                                  });
+                            }
+                          } else {
+                            return Text(snapshot.stackTrace.toString());
+                          }
+                        }),
+                    isLoading ? ProductGridSkeleton() : SizedBox(height: 10),
                     SizedBox(height: 50)
                   ]),
             ),

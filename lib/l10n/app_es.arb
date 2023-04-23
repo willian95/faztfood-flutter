@@ -22,5 +22,6 @@
   "continueStep":"Continuar",
   "finishStep":"Finalizar",
   "newPassword":"Casi terminamos!",
-  "chooseNewPassword":"Elige una nueva contraseña"
+  "chooseNewPassword":"Elige una nueva contraseña",
+  "all": "Todos"
 }

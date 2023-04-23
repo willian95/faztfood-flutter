@@ -1,6 +1,17 @@
 import 'package:flutter/material.dart';
 
 class HomeProductCard extends StatelessWidget {
+  String name;
+  String picture;
+  double price;
+
+  HomeProductCard(
+      {Key? key,
+      required this.name,
+      required this.picture,
+      required this.price})
+      : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     // TODO: implement build
@@ -20,15 +31,21 @@ class HomeProductCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Center(child: Text("Cheese Burguer")),
-          Image.asset("resources/images/food1.jpg"),
+          Center(child: Text(name)),
+          Center(
+            child: Image.network(
+              picture,
+              fit: BoxFit.fill,
+              height: 120,
+            ),
+          ),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
                   padding: EdgeInsets.only(bottom: 6, left: 10),
-                  child: Text("\$ 4.55",
+                  child: Text("\$ " + price.toString(),
                       textAlign: TextAlign.left,
                       style: TextStyle(fontWeight: FontWeight.bold))),
               Container(
